@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System Performance Report | Atlanta Regional Commission</title>
+<meta name="description" content="Tracking transportation metrics for the Atlanta region">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800&display=swap" rel="stylesheet">
+<script src="https://cdn.plot.ly/plotly-4.1.1.min.js" charset="utf-8"></script>
+<style>
+:root{
+  --navy:#0b2433; --navy-2:#12344a; --gold:#f5a623;
+  --ink:#1d2a33; --muted:#5b6b76; --line:#e3e8ec; --bg:#f5f7f9; --card:#ffffff;
+  --blue:#2563a6; --slate:#8a99a6; --green:#5f8f3e; --green-bg:#eef4e8; --red:#b54a3a;
+  --amber:#e0a43a; --teal:#2d6a66;
+  --header-h:68px; --radius:10px;
+  --space-1:.5rem; --space-2:1rem; --space-3:1.5rem; --space-4:2.5rem; --space-5:4rem;
+  --measure:100%;   /* text uses the full content width, same as charts and maps */
+  /* Same family as the Experience Builder dashboards (Avenir Next). Nunito Sans is the free web fallback. */
+  --font-head:"Avenir Next", "Avenir Next LT Pro", Avenir, "Nunito Sans", "Segoe UI", sans-serif;
+  --font-body:"Avenir Next", "Avenir Next LT Pro", Avenir, "Nunito Sans", "Segoe UI", sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth; scroll-padding-top:calc(var(--header-h) + 16px)}
+body{margin:0; background:var(--bg); color:var(--ink); font:400 17px/1.65 var(--font-body); -webkit-font-smoothing:antialiased}
+a{color:var(--blue); text-underline-offset:2px}
+a:hover{color:var(--navy)}
+h1,h2,h3,h4{font-family:var(--font-head); font-weight:700; letter-spacing:-.01em; line-height:1.2; margin:0; color:var(--navy)}
+p{margin:0 0 var(--space-2)}
+p:last-child{margin-bottom:0}
+
+/* ---------------- header (matches the CMP dashboard) ---------------- */
+.site-header{position:sticky; top:0; z-index:50; background:var(--navy); color:#fff; box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.site-header .bar{max-width:1280px; margin:0 auto; height:var(--header-h); display:flex; align-items:center; gap:var(--space-3); padding:0 24px}
+.brand{display:flex; align-items:center; gap:14px; color:#fff; text-decoration:none; flex-shrink:0}
+.brand img{height:34px}
+.brand .mark{font:800 28px/1 var(--font-head); letter-spacing:-.5px; color:#fff}
+.brand .name{font:600 19px/1.1 var(--font-head); border-left:1px solid rgba(255,255,255,.25); padding-left:14px}
+.nav{margin-left:auto; display:flex; gap:4px; overflow-x:auto; scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
+.nav{gap:clamp(4px,2vw,28px)}
+.nav a{color:#fff; text-decoration:none; white-space:nowrap; font:600 14.5px/1 var(--font-body); padding:10px 8px; border-radius:6px; position:relative}
+.nav a:hover{color:#fff; background:rgba(255,255,255,.07)}
+.nav a.active{text-decoration:underline; text-underline-offset:5px}
+
+@media (max-width:980px){
+  .site-header .bar{height:auto; flex-wrap:wrap; padding:10px 16px 0; gap:8px}
+  .nav{width:100%; margin:0 -8px; padding-bottom:6px}
+  :root{--header-h:104px}
+}
+
+/* ---------------- layout ---------------- */
+.wrap{max-width:1120px; margin:0 auto; padding:0 24px}
+@media (max-width:600px){ .wrap{padding:0 16px} body{font-size:16px} }
+.hero{background:linear-gradient(180deg,#fff 0%, #fff 70%, var(--bg) 100%); border-bottom:1px solid var(--line); padding:var(--space-4) 0 var(--space-4)}
+.crumbs{font-size:14px; color:var(--muted); margin-bottom:var(--space-2)}
+.crumbs a{color:var(--muted)}
+.hero h1{font-size:clamp(30px,4vw,44px); margin-bottom:6px}
+.hero .sub{font:600 19px/1.3 var(--font-head); color:var(--teal); margin-bottom:var(--space-3)}
+.col{max-width:var(--measure); margin-left:auto; margin-right:auto}
+
+.jump{display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-top:var(--space-4)}
+@media (max-width:980px){ .jump{grid-template-columns:repeat(2,1fr)} }
+@media (max-width:480px){ .jump{grid-template-columns:1fr} }
+.jump a{display:block; text-decoration:none; background:var(--navy); color:#fff; border-radius:var(--radius); padding:16px 16px 18px; transition:transform .15s, background .15s; border-bottom:4px solid var(--gold)}
+.jump a:hover{background:var(--navy-2); transform:translateY(-2px); color:#fff}
+.unused-jump .eb{font:600 12px/1 var(--font-body); letter-spacing:.08em; text-transform:uppercase; color:var(--gold)}
+.jump .tt{font:600 20px/1.15 var(--font-head); margin-top:8px; display:block}
+
+section.report{padding:var(--space-5) 0 var(--space-4); border-bottom:1px solid var(--line)}
+section.report:nth-of-type(even){background:#fff}
+.sec-head{margin-bottom:var(--space-3)}
+.sec-head .eb{display:inline-block; font:700 12px/1 var(--font-body); letter-spacing:.1em; text-transform:uppercase; color:var(--teal); background:#e5f0ef; padding:6px 10px; border-radius:20px; margin-bottom:10px}
+.sec-head h2{font-size:clamp(28px,3.2vw,38px)}
+.block{margin-top:var(--space-4)}
+.block:first-child{margin-top:0}
+.block.text + .block.text{margin-top:var(--space-2)}
+.block.subhead + .block.text{margin-top:var(--space-1)}
+.block.subhead{margin-top:var(--space-5)}
+.block.subhead h3{font-size:24px; padding-left:12px; border-left:4px solid var(--gold)}
+.prose,.sec-head,.block.subhead{max-width:var(--measure); margin-left:auto; margin-right:auto}
+
+.card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:var(--space-3); box-shadow:0 1px 2px rgba(16,40,56,.04)}
+section.report:nth-of-type(even) .card{background:#fbfcfd}
+.card-title{font:700 18px/1.25 var(--font-head); color:var(--navy); margin-bottom:var(--space-2)}
+.note{font-size:14px; color:var(--muted); margin-top:var(--space-1)}
+
+/* ---------------- compare (State vs ARC) ---------------- */
+.cmp-group{display:grid; grid-template-columns:120px 1fr; gap:var(--space-3); align-items:center; padding:var(--space-2) 0}
+.cmp-group + .cmp-group{border-top:1px solid var(--line)}
+.cmp-map svg{width:100%; height:auto; display:block}
+.cmp-map figcaption{text-align:center; font:700 15px/1.2 var(--font-head); margin-top:6px}
+.cmp-grid{display:grid; grid-template-columns:72px 1fr 1fr; column-gap:var(--space-3); row-gap:8px; align-items:center; font-size:14px}
+.cmp-grid .hd{font:700 13px/1 var(--font-body); color:var(--muted); text-transform:uppercase; letter-spacing:.06em}
+.cmp-grid .lbl{color:var(--muted)}
+.cmp-bar{height:26px; border-radius:4px; display:flex; align-items:center; padding:0 8px; color:#fff; font-weight:700; font-size:14px; white-space:nowrap; min-width:max-content}
+.cmp-bar small{font-weight:400; opacity:.85; margin-left:6px}
+.cmp-bar.target{background:var(--green)}
+@media (max-width:640px){ .cmp-group{grid-template-columns:1fr} .cmp-map{max-width:110px} .cmp-grid{grid-template-columns:62px 1fr 1fr; column-gap:10px} }
+
+/* ---------------- tables ---------------- */
+.tbl-wrap{overflow-x:auto}
+table.data{width:100%; border-collapse:collapse; font-size:15px; font-variant-numeric:tabular-nums}
+table.data th, table.data td{padding:10px 12px; text-align:right; border-bottom:1px solid var(--line)}
+table.data th:first-child, table.data td:first-child{text-align:left}
+table.data thead th{font-weight:700; color:var(--navy); border-bottom:2px solid var(--navy); white-space:nowrap}
+table.data th.tgt, table.data td.tgt{background:var(--green-bg)}
+table.data td.na{color:#b0bac2}
+table.data tr.regional td{font-weight:700; background:#f1f5f8; border-top:2px solid var(--navy)}
+.ok{color:var(--green); font-weight:700; margin-left:4px}
+.no{color:var(--red); font-weight:700; margin-left:4px}
+
+/* ---------------- KPI tiles ---------------- */
+.kpis{display:grid; grid-template-columns:repeat(3,1fr); gap:var(--space-2)}
+@media (max-width:760px){ .kpis{grid-template-columns:1fr} }
+.kpi .k-lbl{font:600 15px/1.2 var(--font-body); color:var(--muted)}
+.kpi .k-big{font:800 38px/1 var(--font-head); color:var(--navy); margin:10px 0 2px}
+.kpi .k-sub{font-size:14px; color:var(--muted)}
+.stack{display:flex; height:10px; border-radius:5px; overflow:hidden; margin-top:12px; background:#eef1f4}
+.stack .g{background:var(--green)} .stack .f{background:#cfd8de} .stack .p{background:var(--red)}
+.legend-inline{display:flex; gap:14px; font-size:13px; color:var(--muted); margin-top:var(--space-2)}
+.legend-inline i{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:-1px}
+
+/* ---------------- map ---------------- */
+.map-card{padding:0; overflow:hidden}
+.map-card .card-title{padding:var(--space-2) var(--space-3) 0}
+.map{width:100%; background:#e9eef2 center/40px no-repeat; position:relative}
+.map .loading{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:15px}
+.map-foot{display:flex; justify-content:space-between; gap:12px; padding:10px var(--space-3); font-size:14px; border-top:1px solid var(--line)}
+
+/* ---------------- report cards ---------------- */
+.reports{display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:12px}
+.rep{display:flex; flex-direction:column; gap:6px; text-decoration:none; color:var(--ink); background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px; transition:border-color .15s, box-shadow .15s, transform .15s}
+.rep:hover{border-color:var(--blue); box-shadow:0 6px 16px rgba(11,36,51,.08); transform:translateY(-2px); color:var(--ink)}
+.rep .badge{align-self:flex-start; font:700 11px/1 var(--font-body); letter-spacing:.08em; color:#fff; background:var(--teal); padding:5px 8px; border-radius:4px}
+.rep .rl{font:700 17px/1.2 var(--font-head); color:var(--navy)}
+.rep .go{font-size:13px; color:var(--blue); font-weight:600}
+
+/* ---------------- timeline ---------------- */
+.tl{display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3)}
+@media (max-width:800px){ .tl{grid-template-columns:1fr} }
+.tl-period h4{font:600 16px/1.2 var(--font-body); color:var(--muted); margin-bottom:var(--space-2); text-transform:uppercase; letter-spacing:.06em}
+.tl-steps{list-style:none; margin:0; padding:0 0 0 22px; position:relative}
+.tl-steps::before{content:""; position:absolute; left:7px; top:8px; bottom:8px; width:2px; background:var(--tl, var(--green))}
+.tl-steps li{position:relative; margin-bottom:12px}
+.tl-steps li::before{content:""; position:absolute; left:-21px; top:18px; width:14px; height:14px; border-radius:50%; background:var(--tl, var(--green)); border:3px solid #fff; box-shadow:0 0 0 1px var(--tl, var(--green))}
+.tl-steps li.pending::before{background:#fff}
+.tl-item{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 16px; border-radius:8px; background:#fff; border:1px solid var(--line); text-decoration:none; color:var(--ink); transition:border-color .15s, box-shadow .15s}
+a.tl-item:hover{border-color:var(--tl, var(--green)); box-shadow:0 4px 12px rgba(11,36,51,.08); color:var(--ink)}
+.tl-item .d{font:700 13px/1 var(--font-body); color:var(--tl, var(--green)); white-space:nowrap}
+.tl-item .l{font-weight:600}
+.tl-item .s{font-size:13px; color:var(--blue); font-weight:600; white-space:nowrap}
+.pending .tl-item{background:#f7f9fa; color:var(--muted); border-style:dashed}
+.pending .tl-item .s{color:var(--muted)}
+.tl.green{--tl:#5f8f3e} .tl.amber{--tl:#d08a1e} .tl.slate{--tl:#5b6b76}
+
+/* ---------------- transit tabs ---------------- */
+.tabs{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:var(--space-2)}
+.tab{display:flex; align-items:center; gap:8px; font:600 15px/1 var(--font-body); padding:10px 14px; border-radius:30px; border:1px solid var(--line); background:#fff; color:var(--navy); cursor:pointer}
+.tab svg{width:18px; height:18px}
+.tab[aria-selected="true"]{background:var(--navy); border-color:var(--navy); color:#fff}
+.tabpanel[hidden]{display:none}
+
+/* ---------------- footer & misc ---------------- */
+footer{background:var(--navy); color:#c9d6df; padding:var(--space-4) 0; font-size:14px}
+footer a{color:#fff}
+.totop{position:fixed; right:20px; bottom:20px; width:44px; height:44px; border-radius:50%; border:0; background:var(--gold); color:var(--navy); font-size:20px; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,.2); opacity:0; pointer-events:none; transition:opacity .2s}
+.totop.show{opacity:1; pointer-events:auto}
+.js-plotly-plot{width:100%}
+@media print{ .site-header, .totop, .jump{display:none} section.report{break-inside:avoid-page; padding:24px 0} }
+</style>
+</head>
+<body>
+
+
+
+<header class="site-header">
+  <div class="bar">
+    <a class="brand" href="#top" aria-label="Atlanta Regional Commission – back to top">
+<span class="mark">A<span>R</span>C</span>      <span class="name">System Performance Report</span>
+    </a>
+    <nav class="nav" aria-label="Report sections">
+<a href="#pm1">PM1 · Safety</a><a href="#pm2">PM2 · Assets</a><a href="#pm3">PM3 · System Performance</a><a href="#tam">Transit Assets</a><a href="#transit-safety">Transit Safety</a>    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <div class="hero">
+    <div class="wrap"><div class="col">
+      <div class="crumbs"><a href="https://atlantaregional.org/what-we-do/transportation-planning/transportation-dashboard/">Transportation Dashboard</a> › System Performance Report</div>
+      <h1>Transportation Performance Targets</h1>
+      <div class="sub">Tracking transportation metrics for the Atlanta region</div>
+      <div class="lede"><p>Federal transportation performance measures are metrics used to evaluate the performance of transportation systems at the federal level. These measures are used to assess the effectiveness and efficiency of transportation investments, as well as to identify areas for improvement. The Atlanta Regional Commission (ARC) uses performance measures to track trends in transportation system performance. The trends observed in these measures provide important insights that can help guide transportation planning and investment decisions in the region.</p><p>Safety (PM1), asset management (PM2), and system performance (PM3) are three measures mandated by the Federal Highway Administration (FHWA). Two measures, transit safety and transit asset management, are mandated by the Federal Transit Administration (FTA).</p></div>
+    </div></div>
+  </div>
+
+  <section class="report" id="pm1">
+    <div class="wrap">
+      <div class="sec-head"><span class="eb">FHWA · PM1</span><h2>Safety</h2></div>
+<div class="block text prose"><p>The Atlanta Regional Commission (ARC) has a comprehensive safety program that aims to reduce the number of traffic fatalities and serious injuries in the 20-county Atlanta region. The program is designed to address safety issues on all types of transportation infrastructure, including roads, bridges, transit systems, and pedestrian and bicycle facilities.</p><p>In January of each year the Georgia Department of Transportation (GDOT) establishes safety targets, and ARC has 180 days to agree to those targets. While ARC follows the targets that GDOT sets, as an MPO it also establishes its own aspirational targets.</p></div>
+
+<div class="block card">
+  <div class="card-title">Fatalities and serious injuries, 2013–2023</div>
+  <div class="cmp-group">
+    <figure class="cmp-map" style="margin:0">
+      <svg viewBox="0 0 200 230" role="img" aria-label="Georgia">
+<path d="M11.3,47.4L9.7,37.5L8,26.1L7.5,23L7.2,21.3L5.6,9.9L4.8,4L10,4.1L14.3,4.2L18.1,4.2L29.4,4.3L36,4.4L37.3,4.4L43.5,4.4L55.2,4.5L62.8,4.6L67.6,4.7L70.2,4.7L82.8,4.7L85.4,4.5L88.1,4.4L102.8,4.1L102.3,7L98,9.8L94.3,14.2L94.5,15.6L93.2,17.7L93.8,19.1L98,22.7L100.4,23L103,26.3L105.1,28.2L107.4,29L110.9,28.7L112.1,29.1L113.2,31.8L113.7,34.4L115.4,35.6L116.1,38.1L117.4,39.8L117.4,41.9L118.4,44.7L120.1,45.7L121.3,48.4L123.3,50.4L123.3,51.2L124.6,53.9L126.2,54.5L128.9,57.5L133.1,59.6L137.3,63.6L138.5,66.7L139.4,69.4L141.2,70.9L142.7,70.9L146.1,73.3L146.7,74L148,76.2L150.2,77.3L150.8,78.3L149.8,80L150.4,81.6L149.9,83L153.9,86.3L153.4,87.5L155.3,89.2L156.3,88.7L157.3,89.8L156.6,90.7L157.8,92.5L161.7,94.7L163,94.7L165.9,97L168.1,98.7L167.5,101.5L169.2,104.1L169.6,106.1L170.9,106.7L170.9,110.2L171.5,111.3L170.9,113.3L171.7,113.7L172.4,115.6L171.4,116.8L172.6,118.4L175.3,120.1L176.9,120.2L177.1,121.2L180.5,124.5L180,125.9L182.2,130.1L182.8,130L183.7,133.1L182.3,135.2L182.8,135.9L184,137.6L183.4,138.7L184.2,141.3L187.3,142.6L188.9,141.9L192.2,144.7L193.5,144.8L195.2,145.3L194.6,147.9L192.6,149.2L191.1,148.6L190.3,150.6L191.7,150.9L189.5,153.4L186.4,152.5L186,154.8L187.6,155.3L186.3,157.7L183.9,160L182.9,159.9L181.1,159.9L181.7,161L183.9,161.3L183.9,164.7L182.3,168L181.4,167.5L178.8,168.5L178.8,169.4L181.3,168.9L182.2,169.9L178.9,175.3L178.1,179.1L178.6,180.6L177.8,184.9L175.9,185.8L174.8,188.3L173.5,188.4L173.5,191.3L173,193.6L171.8,194.1L169.8,196L171.7,196.9L173.3,195.9L173.5,199.2L171.3,205.9L172.1,208.8L170.1,208L168.1,208.7L165.6,208L160.7,207.3L159.6,206.3L156.9,205.1L154.4,205.1L153.1,203.8L151.2,203.5L149.9,205.9L148.1,205.6L148.7,206.6L147.5,207.3L147.7,209.3L147.1,211.7L149,215.5L148.6,220.4L147.7,222.3L147.9,224.7L147.3,225.8L145.1,225.5L142.3,226L140.6,222.9L141,220L140,218.9L139.7,216.6L140.4,216L131.9,215.5L130.3,215.3L125.1,215L120.8,214.8L102.3,213.6L96.7,213.2L93.3,213L82.8,212.3L77.4,212L66.6,211.3L63.3,211.1L55.2,210.6L51.2,210.3L31.3,209.1L30.8,208.3L29.2,207.1L28.4,204L28.1,200.6L26.5,198.4L25.7,195.2L24.9,191.6L24.4,190L21.5,186.2L22,184L21.3,181.9L22.4,180.4L22.3,177.8L23.5,174.5L23.2,172.8L24.3,170.4L23.9,165.5L21.2,161.9L21.2,158.6L21.2,157.8L20.7,154.9L21.2,153.1L23.2,150.2L24,147.8L24.5,144.3L24.2,140.8L26.2,138.7L28.2,137.9L27.9,136.9L29.8,136.3L31,134.8L29.3,133.1L26.7,131.9L27.5,129.2L28.2,127.1L26.9,125.6L26.7,122.9L26,121.3L23.6,118.2L22.7,116.4L21.8,111.3L22.1,110.2L20.2,108.4L20.8,106.9L19.6,105.6L17.9,94.1L17.8,93.1L15.7,78.8L15.3,76.1L14.2,68L12.4,56L12,53Z" fill="#8a99a6"/>
+      </svg>
+      <figcaption style="color:#8a99a6">Georgia</figcaption>
+    </figure>
+    <div class="cmp-grid">
+<span></span><span class="hd">Fatalities</span><span class="hd">Serious injuries</span>      <span class="lbl">Average</span>
+        <div><div class="cmp-bar" style="width:81.9%;background:#8a99a6">1,414</div></div>
+        <div><div class="cmp-bar" style="width:74.3%;background:#8a99a6">6,450</div></div>
+      <span class="lbl">Maximum</span>
+        <div><div class="cmp-bar" style="width:100.0%;background:#8a99a6">1,726<small>2022</small></div></div>
+        <div><div class="cmp-bar" style="width:100.0%;background:#8a99a6">8,679<small>2021</small></div></div>
+      <span class="lbl">Target</span>
+        <div><div class="cmp-bar target" style="width:92.7%;">1,600</div></div>
+        <div><div class="cmp-bar target" style="width:81.9%;">7,109</div></div>
+    </div>
+  </div>
+  <div class="cmp-group">
+    <figure class="cmp-map" style="margin:0">
+      <svg viewBox="0 0 200 230" role="img" aria-label="ARC region">
+<path d="M11.3,47.4L9.7,37.5L8,26.1L7.5,23L7.2,21.3L5.6,9.9L4.8,4L10,4.1L14.3,4.2L18.1,4.2L29.4,4.3L36,4.4L37.3,4.4L43.5,4.4L55.2,4.5L62.8,4.6L67.6,4.7L70.2,4.7L82.8,4.7L85.4,4.5L88.1,4.4L102.8,4.1L102.3,7L98,9.8L94.3,14.2L94.5,15.6L93.2,17.7L93.8,19.1L98,22.7L100.4,23L103,26.3L105.1,28.2L107.4,29L110.9,28.7L112.1,29.1L113.2,31.8L113.7,34.4L115.4,35.6L116.1,38.1L117.4,39.8L117.4,41.9L118.4,44.7L120.1,45.7L121.3,48.4L123.3,50.4L123.3,51.2L124.6,53.9L126.2,54.5L128.9,57.5L133.1,59.6L137.3,63.6L138.5,66.7L139.4,69.4L141.2,70.9L142.7,70.9L146.1,73.3L146.7,74L148,76.2L150.2,77.3L150.8,78.3L149.8,80L150.4,81.6L149.9,83L153.9,86.3L153.4,87.5L155.3,89.2L156.3,88.7L157.3,89.8L156.6,90.7L157.8,92.5L161.7,94.7L163,94.7L165.9,97L168.1,98.7L167.5,101.5L169.2,104.1L169.6,106.1L170.9,106.7L170.9,110.2L171.5,111.3L170.9,113.3L171.7,113.7L172.4,115.6L171.4,116.8L172.6,118.4L175.3,120.1L176.9,120.2L177.1,121.2L180.5,124.5L180,125.9L182.2,130.1L182.8,130L183.7,133.1L182.3,135.2L182.8,135.9L184,137.6L183.4,138.7L184.2,141.3L187.3,142.6L188.9,141.9L192.2,144.7L193.5,144.8L195.2,145.3L194.6,147.9L192.6,149.2L191.1,148.6L190.3,150.6L191.7,150.9L189.5,153.4L186.4,152.5L186,154.8L187.6,155.3L186.3,157.7L183.9,160L182.9,159.9L181.1,159.9L181.7,161L183.9,161.3L183.9,164.7L182.3,168L181.4,167.5L178.8,168.5L178.8,169.4L181.3,168.9L182.2,169.9L178.9,175.3L178.1,179.1L178.6,180.6L177.8,184.9L175.9,185.8L174.8,188.3L173.5,188.4L173.5,191.3L173,193.6L171.8,194.1L169.8,196L171.7,196.9L173.3,195.9L173.5,199.2L171.3,205.9L172.1,208.8L170.1,208L168.1,208.7L165.6,208L160.7,207.3L159.6,206.3L156.9,205.1L154.4,205.1L153.1,203.8L151.2,203.5L149.9,205.9L148.1,205.6L148.7,206.6L147.5,207.3L147.7,209.3L147.1,211.7L149,215.5L148.6,220.4L147.7,222.3L147.9,224.7L147.3,225.8L145.1,225.5L142.3,226L140.6,222.9L141,220L140,218.9L139.7,216.6L140.4,216L131.9,215.5L130.3,215.3L125.1,215L120.8,214.8L102.3,213.6L96.7,213.2L93.3,213L82.8,212.3L77.4,212L66.6,211.3L63.3,211.1L55.2,210.6L51.2,210.3L31.3,209.1L30.8,208.3L29.2,207.1L28.4,204L28.1,200.6L26.5,198.4L25.7,195.2L24.9,191.6L24.4,190L21.5,186.2L22,184L21.3,181.9L22.4,180.4L22.3,177.8L23.5,174.5L23.2,172.8L24.3,170.4L23.9,165.5L21.2,161.9L21.2,158.6L21.2,157.8L20.7,154.9L21.2,153.1L23.2,150.2L24,147.8L24.5,144.3L24.2,140.8L26.2,138.7L28.2,137.9L27.9,136.9L29.8,136.3L31,134.8L29.3,133.1L26.7,131.9L27.5,129.2L28.2,127.1L26.9,125.6L26.7,122.9L26,121.3L23.6,118.2L22.7,116.4L21.8,111.3L22.1,110.2L20.2,108.4L20.8,106.9L19.6,105.6L17.9,94.1L17.8,93.1L15.7,78.8L15.3,76.1L14.2,68L12.4,56L12,53Z" fill="#e6ebef" stroke="#c3ccd3" stroke-width="1"/><path d="M31,47.7L26.1,47.6L26.1,46.9L26.3,41.3L27,41.3L27.2,34.9L28,35L27.8,32.8L30,33.2L30,32.5L38.6,32.7L38.6,31.9L41.9,32L44.6,32L44.6,33.5L57.5,33.6L57.5,29.6L55.1,29.5L54,24.9L54.4,24.1L57.7,24.7L57.7,23.3L60,22.3L60.3,23L60.1,25.9L63.5,29.6L68.4,31.9L68.4,34.8L69.4,36L70.2,38.3L69.7,40.5L68.1,42.6L66.4,42.6L65.1,43.9L72.8,47.3L74.7,45.9L76.9,48.9L82.9,49.7L84.8,50.5L86,53.6L81.6,56.5L82.3,57.4L84.1,57.6L84.4,59.2L87.1,60.7L80.3,71.3L80.1,74.7L80.4,76.6L77.9,76.8L76.5,78.2L74.4,78.9L74.2,81L72.9,82.2L70.9,79.9L70.5,78.6L68.5,80.3L68.9,81.9L66.2,82.5L65,85L63.3,85.5L63.9,86.1L62.4,87.7L62.4,90.1L62.4,91.3L58.4,91.2L57.5,90.7L52.5,90.6L51.6,89.7L49.3,89.7L47.4,90.9L47.3,89.1L33.2,88.8L32.8,90.4L32.8,88.8L29.8,88.7L26.9,79L15.7,78.8L15.3,76.1L14.2,68L16,68L22.1,65.8L23.4,66.1L25.7,65.2L25.7,60.5L26.2,60.6L26.4,56.1L25.8,56.1L25.8,53.8L28.7,53.9Z" fill="#2563a6"/>      </svg>
+      <figcaption style="color:#2563a6">ARC region</figcaption>
+    </figure>
+    <div class="cmp-grid">
+      <span class="lbl">Average</span>
+        <div><div class="cmp-bar" style="width:73.2%;background:#2563a6">595</div></div>
+        <div><div class="cmp-bar" style="width:67.9%;background:#2563a6">2,913</div></div>
+      <span class="lbl">Maximum</span>
+        <div><div class="cmp-bar" style="width:100.0%;background:#2563a6">813<small>2021</small></div></div>
+        <div><div class="cmp-bar" style="width:100.0%;background:#2563a6">4,292<small>2021</small></div></div>
+      <span class="lbl">Target</span>
+        <div><div class="cmp-bar target" style="width:81.4%;">662</div></div>
+        <div><div class="cmp-bar target" style="width:86.4%;">3,707</div></div>
+    </div>
+  </div>
+  <p class="note">Green bars show the 2025 target. Average and maximum cover 2013–2023. ARC region shown as its 20-county MPO planning area.</p>
+</div>
+
+<div class="block text prose"><p>Roughly 600 people die and more than 2,800 people are seriously injured in traffic crashes in the ARC region every year. In the nine years from 2013 to 2022, the number of deaths increased from 455 to 767 and the number of serious injuries increased from 1,902 to 4,006. The vision for the Atlanta region is safe, accessible, and convenient travel for all road users. As a moderate, achievable goal, ARC will adopt a 5% reduction target each year for all safety performance measures.</p></div>
+
+<figure class="block card" style="margin-left:0;margin-right:0">
+  <figcaption class="card-title">Fatalities and serious injuries in the ARC region</figcaption>
+  <div style="height:400px; width:100%;">                            <div id="chart-0" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("chart-0")) {                    Plotly.newPlot(                        "chart-0",                        [{"hovertemplate":"%{x}: \u003cb\u003e%{y:,}\u003c\u002fb\u003e\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#d9772b","width":3},"marker":{"size":7},"mode":"lines+markers","name":"Fatalities","showlegend":false,"x":[2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[455,401,491,565,584,603,513,658,813,767,693],"type":"scatter","xaxis":"x","yaxis":"y"},{"hovertemplate":"ARC 2025 target: \u003cb\u003e%{y:,}\u003c\u002fb\u003e\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#5f8f3e","dash":"dot","width":2.5},"marker":{"color":"#5f8f3e","size":[0,11],"symbol":"diamond"},"mode":"lines+markers","showlegend":false,"x":[2023,2025],"y":[693,662],"type":"scatter","xaxis":"x","yaxis":"y"},{"hovertemplate":"%{x}: \u003cb\u003e%{y:,}\u003c\u002fb\u003e\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#0b2433","width":3},"marker":{"size":7},"mode":"lines+markers","name":"Serious injuries","showlegend":false,"x":[2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[1902,1787,1913,2125,2348,2853,3365,3572,4292,4006,3885],"type":"scatter","xaxis":"x2","yaxis":"y2"},{"hovertemplate":"ARC 2025 target: \u003cb\u003e%{y:,}\u003c\u002fb\u003e\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#5f8f3e","dash":"dot","width":2.5},"marker":{"color":"#5f8f3e","size":[0,11],"symbol":"diamond"},"mode":"lines+markers","showlegend":false,"x":[2023,2025],"y":[3885,3707],"type":"scatter","xaxis":"x2","yaxis":"y2"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05}}},"xaxis":{"anchor":"y","domain":[0.0,0.455],"dtick":2,"range":[2012.5,2025.7],"showgrid":false,"linecolor":"#b9c3cb","ticks":"","automargin":true},"yaxis":{"anchor":"x","domain":[0.0,1.0],"rangemode":"tozero","tickformat":",","gridcolor":"#e6ebef","zeroline":false,"ticks":"","automargin":true},"xaxis2":{"anchor":"y2","domain":[0.545,1.0],"dtick":2,"range":[2012.5,2025.7],"showgrid":false,"linecolor":"#b9c3cb","ticks":"","automargin":true},"yaxis2":{"anchor":"x2","domain":[0.0,1.0],"rangemode":"tozero","tickformat":",","gridcolor":"#e6ebef","zeroline":false,"ticks":"","automargin":true},"annotations":[{"font":{"size":15,"color":"#1d2a33"},"showarrow":false,"text":"Fatalities","x":0.2275,"xanchor":"center","xref":"paper","y":1.0,"yanchor":"bottom","yref":"paper"},{"font":{"size":15,"color":"#1d2a33"},"showarrow":false,"text":"Serious injuries","x":0.7725,"xanchor":"center","xref":"paper","y":1.0,"yanchor":"bottom","yref":"paper"},{"font":{"color":"#5b6b76","size":12},"showarrow":false,"text":"Peak 813 (2021)","x":2021,"xref":"x","y":813,"yref":"y","yshift":16},{"font":{"color":"#5f8f3e","size":12},"showarrow":false,"text":"2025 target\u003cbr\u003e\u003cb\u003e662\u003c\u002fb\u003e","x":2025,"xref":"x","y":662,"yref":"y","yshift":-26},{"font":{"color":"#5b6b76","size":12},"showarrow":false,"text":"Peak 4,292 (2021)","x":2021,"xref":"x2","y":4292,"yref":"y2","yshift":16},{"font":{"color":"#5f8f3e","size":12},"showarrow":false,"text":"2025 target\u003cbr\u003e\u003cb\u003e3,707\u003c\u002fb\u003e","x":2025,"xref":"x2","y":3707,"yref":"y2","yshift":-26}],"margin":{"l":8,"r":8,"t":36,"b":8},"font":{"family":"Avenir Next, Avenir, Nunito Sans, Segoe UI, sans-serif","size":14,"color":"#1d2a33"},"legend":{"orientation":"h","yanchor":"bottom","y":1.02,"x":0,"title":{}},"hoverlabel":{"font":{"family":"Avenir Next, Avenir, Nunito Sans, Segoe UI, sans-serif"},"bgcolor":"white"},"height":400,"paper_bgcolor":"rgba(0,0,0,0)","plot_bgcolor":"rgba(0,0,0,0)","bargap":0.28},                        {"displayModeBar": false, "responsive": true}                    )                };            </script>        </div>
+<p class="note">Dashed segment shows the path to ARC&#39;s 2025 target.</p></figure>
+
+<div class="block text prose"><p>It is important to break up intractable problems into smaller and more adaptable responses. Establishing emphasis areas is one opportunity to break up larger safety issues into manageable components. The <a href="https://cdn.atlantaregional.org/wp-content/uploads/arc-regional-safety-strategy-9-may-23.pdf" target="_blank" rel="noopener">Regional Safety Strategy (RSS)</a> is an action plan with a data-driven approach to help ARC achieve its safety goals.</p><p>According to the Regional Safety Strategy, the top contributors to deaths are intersections, roadway departures, and pedestrian and bicycle crashes. ARC selected these crash types as regional emphasis areas because they present the greatest opportunity to reduce death and serious injury, and they are the focus crash types of the Regional Safety Strategy.</p><p>The <a href="https://garc.maps.arcgis.com/apps/webappviewer/index.html?id=e2855f088f2e4b8db81803096741f52a" target="_blank" rel="noopener">Atlanta Regional Safety Risk Factors Map</a> depicts the number of risk factors in the region for different categories.</p></div>
+
+<div class="block card map-card">
+  <div class="card-title">Atlanta Regional Safety Risk Factors</div>
+  <div class="map" data-webmap="df56c01d11c04b18a02449309b82ef15" style="height:520px"><div class="loading">Loading map…</div></div>
+  <div class="map-foot"><span class="muted">Use the layer and legend buttons on the map to explore.</span><a href="https://garc.maps.arcgis.com/apps/mapviewer/index.html?webmap=df56c01d11c04b18a02449309b82ef15" target="_blank" rel="noopener">Open full map ↗</a></div>
+</div>
+
+<div class="block text prose"><p>In addition to the Regional Safety Strategy prepared by ARC, the Highway Safety Improvement Program (HSIP) is another program with the goal of reducing fatalities and serious injuries on all public roads. GDOT reports annually on the progress being made to advance HSIP implementation. The reports below describe how the HSIP program invests in safety projects and track the statewide performance measures.</p></div>
+
+<div class="block">
+  <div class="card-title">HSIP annual reports</div>
+  <div class="tl amber">
+    <div class="tl-period"><h4>2017–2019</h4>
+      <ol class="tl-steps">
+        <li><a class="tl-item" href="https://cdn.atlantaregional.org/wp-content/uploads/hsip-annual-report-2017.pdf" target="_blank" rel="noopener"><span><span class="d">2017</span><br><span class="l">HSIP 2017 Annual Report</span></span><span class="s">PDF ↗</span></a></li>
+        <li><a class="tl-item" href="https://cdn.atlantaregional.org/wp-content/uploads/hsip-annual-report-2018.pdf" target="_blank" rel="noopener"><span><span class="d">2018</span><br><span class="l">HSIP 2018 Annual Report</span></span><span class="s">PDF ↗</span></a></li>
+        <li><a class="tl-item" href="https://cdn.atlantaregional.org/wp-content/uploads/hsip-annual-report-2019.pdf" target="_blank" rel="noopener"><span><span class="d">2019</span><br><span class="l">HSIP 2019 Annual Report</span></span><span class="s">PDF ↗</span></a></li>
+      </ol>
+    </div>
+    <div class="tl-period"><h4>2020–2022</h4>
+      <ol class="tl-steps">
+        <li><a class="tl-item" href="https://cdn.atlantaregional.org/wp-content/uploads/hsip-annual-report-2020.pdf" target="_blank" rel="noopener"><span><span class="d">2020</span><br><span class="l">HSIP 2020 Annual Report</span></span><span class="s">PDF ↗</span></a></li>
+        <li><a class="tl-item" href="https://cdn.atlantaregional.org/wp-content/uploads/hsip-annual-report-2021.pdf" target="_blank" rel="noopener"><span><span class="d">2021</span><br><span class="l">HSIP 2021 Annual Report</span></span><span class="s">PDF ↗</span></a></li>
+        <li><a class="tl-item" href="https://cdn.atlantaregional.org/wp-content/uploads/hsip-annual-report-2022.pdf" target="_blank" rel="noopener"><span><span class="d">2022</span><br><span class="l">HSIP 2022 Annual Report</span></span><span class="s">PDF ↗</span></a></li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+    </div>
+  </section>
+  <section class="report" id="pm2">
+    <div class="wrap">
+      <div class="sec-head"><span class="eb">FHWA · PM2</span><h2>Asset Management</h2></div>
+<div class="block text prose"><p>GDOT is required to establish 2- and 4-year targets for four pavement condition measures and two bridge condition measures. For interstates on the National Highway System (NHS), GDOT&#x27;s goal is to keep more than 50% of the interstate in good condition and to keep poor-condition interstate under 5%. For bridges on the NHS, GDOT&#x27;s 2- and 4-year goals are to keep more than 50% and 60% in good condition, and to keep poor-condition bridges under 10%.</p><p>By tracking the condition of bridges and routes across the state, GDOT can prioritize its maintenance and repair efforts so that resources go where they are most needed. This improves the safety and reliability of Georgia&#x27;s transportation infrastructure and ensures it continues to meet the needs of its users.</p></div>
+
+<div class="block card">
+  <div class="card-title">Statewide asset management performance (%)</div>
+  <div class="tbl-wrap"><table class="data">
+    <thead><tr><th>Measure</th><th>2018</th><th>2019</th><th>2020</th><th class="tgt">2-Year Target</th><th class="tgt">4-Year Target</th></tr></thead>
+    <tbody>
+      <tr><td>Interstate NHS — Good</td>
+<td class="">64.1</td><td class="">57.0</td><td class="">59.4<span class="ok" title="Meets target">✓</span></td><td class="tgt">≥ 50%</td><td class="tgt">≥ 50%</td>      </tr>
+      <tr><td>Interstate NHS — Poor</td>
+<td class="">0.2</td><td class="">0.3</td><td class="">0.2<span class="ok" title="Meets target">✓</span></td><td class="tgt">≤ 5%</td><td class="tgt">≤ 5%</td>      </tr>
+      <tr><td>Non-Interstate NHS — Good</td>
+<td class="na">–</td><td class="">46.5</td><td class="">44.2<span class="ok" title="Meets target">✓</span></td><td class="tgt">≥ 40%</td><td class="tgt">≥ 40%</td>      </tr>
+      <tr><td>Non-Interstate NHS — Poor</td>
+<td class="na">–</td><td class="">0.8</td><td class="">0.8<span class="ok" title="Meets target">✓</span></td><td class="tgt">≤ 12%</td><td class="tgt">≤ 12%</td>      </tr>
+      <tr><td>NHS Bridges — Good</td>
+<td class="">51.5</td><td class="">67.5</td><td class="">78.5<span class="ok" title="Meets target">✓</span></td><td class="tgt">≥ 50%</td><td class="tgt">≥ 60%</td>      </tr>
+      <tr><td>NHS Bridges — Poor</td>
+<td class="">1.1</td><td class="">0.8</td><td class="">0.6<span class="ok" title="Meets target">✓</span></td><td class="tgt">≤ 10%</td><td class="tgt">≤ 10%</td>      </tr>
+    </tbody>
+  </table></div>
+<p class="note">A check mark means the most recent value meets the 4-year target. Blank cells: no data reported.</p></div>
+
+<div class="block text prose"><p>The Asset Management map shows the condition of roads and bridges located within the Atlanta region.</p></div>
+
+<div class="block card map-card">
+  <div class="card-title">Pavement and bridge condition — Atlanta region</div>
+  <div class="map" data-webmap="1e028462467346558d8af3d7a14799ea" style="height:520px"><div class="loading">Loading map…</div></div>
+  <div class="map-foot"><span class="muted">Use the layer and legend buttons on the map to explore.</span><a href="https://garc.maps.arcgis.com/apps/mapviewer/index.html?webmap=1e028462467346558d8af3d7a14799ea" target="_blank" rel="noopener">Open full map ↗</a></div>
+</div>
+
+<div class="block">
+  <div class="card-title">Condition of NHS assets in the Atlanta region</div>
+  <div class="kpis">
+    <div class="card kpi">
+      <div class="k-lbl">Interstate NHS</div>
+      <div class="k-big">60.17%</div>
+      <div class="k-sub">in good condition · <b>0.23%</b> poor</div>
+      <div class="stack" role="img" aria-label="60.17% good, 39.6% fair, 0.23% poor"><span class="g" style="width:60.17%"></span><span class="f" style="width:39.6%"></span><span class="p" style="width:0.23%"></span></div>
+    </div>
+    <div class="card kpi">
+      <div class="k-lbl">Non-Interstate NHS</div>
+      <div class="k-big">45.35%</div>
+      <div class="k-sub">in good condition · <b>0.8%</b> poor</div>
+      <div class="stack" role="img" aria-label="45.35% good, 53.85% fair, 0.8% poor"><span class="g" style="width:45.35%"></span><span class="f" style="width:53.85%"></span><span class="p" style="width:0.8%"></span></div>
+    </div>
+    <div class="card kpi">
+      <div class="k-lbl">Bridges on the NHS</div>
+      <div class="k-big">65.83%</div>
+      <div class="k-sub">in good condition · <b>0.83%</b> poor</div>
+      <div class="stack" role="img" aria-label="65.83% good, 33.34% fair, 0.83% poor"><span class="g" style="width:65.83%"></span><span class="f" style="width:33.34%"></span><span class="p" style="width:0.83%"></span></div>
+    </div>
+  </div>
+  <div class="legend-inline"><span><i style="background:var(--green)"></i>Good</span><span><i style="background:#cfd8de"></i>Fair</span><span><i style="background:var(--red)"></i>Poor</span></div>
+</div>
+
+<div class="block text prose"><p>The Asset Management performance measure helps ensure that the region&#x27;s transportation infrastructure is well maintained, efficient, and effective at meeting the needs of its users. GDOT and local governments are responsible for managing transportation assets in Georgia, including roads and bridges. They regularly assess the condition of these assets to identify areas that require maintenance or repair, evaluating age, pavement condition, and other factors that affect the lifespan and usability of assets.</p><p>Every two years GDOT sets targets for asset management measures, and ARC follows those targets. GDOT had an opportunity to adjust the 4-year target in 2024.</p><p>FHWA established five metrics to assess pavement condition: International Roughness Index (IRI), cracking percent, rutting, faulting, and Present Serviceability Rating (PSR).</p><p>Since 2018, GDOT has used 3D line laser imaging technology to acquire high-resolution pavement surface data to evaluate the condition of the state&#x27;s roadways. The data collected include transverse profile, rutting, faulting, cracking, and IRI. To assess the condition of bridges, GDOT follows the National Bridge Inventory (NBI) guidelines for classifying a bridge in Good, Fair, or Poor condition.</p><p>Baseline, mid-period, and full-period reports for pavement and bridge condition performance are available below.</p></div>
+
+<div class="block">
+  <div class="card-title">PM2 &amp; PM3 performance period reports</div>
+  <div class="tl green">
+    <div class="tl-period"><h4>Performance period 2018–2021</h4>
+      <ol class="tl-steps">
+        <li><a class="tl-item" href="https://cdn.atlantaregional.org/wp-content/uploads/pm2-and-pm3-baseline-report-2018-2021.pdf" target="_blank" rel="noopener"><span><span class="d">Oct 2018</span><br><span class="l">Baseline Performance Period Report</span></span><span class="s">PDF ↗</span></a></li>
+        <li><a class="tl-item" href="https://cdn.atlantaregional.org/wp-content/uploads/pm2-and-pm3-mid-period-report-2018-2021.pdf" target="_blank" rel="noopener"><span><span class="d">Oct 2020</span><br><span class="l">Mid Performance Period Progress Report</span></span><span class="s">PDF ↗</span></a></li>
+        <li><a class="tl-item" href="https://cdn.atlantaregional.org/wp-content/uploads/pm2-and-pm3-full-period-report-2018-2021.pdf" target="_blank" rel="noopener"><span><span class="d">Oct 2022</span><br><span class="l">Full Performance Period Progress Report</span></span><span class="s">PDF ↗</span></a></li>
+      </ol>
+    </div>
+    <div class="tl-period"><h4>Performance period 2022–2025</h4>
+      <ol class="tl-steps">
+        <li><a class="tl-item" href="https://cdn.atlantaregional.org/wp-content/uploads/pm2-and-pm3-baseline-report-2022-2025.pdf" target="_blank" rel="noopener"><span><span class="d">Oct 2022</span><br><span class="l">Baseline Performance Period Report</span></span><span class="s">PDF ↗</span></a></li>
+        <li class="pending"><div class="tl-item"><span><span class="d">Oct 2024</span><br><span class="l">Mid Performance Period Progress Report</span></span><span class="s">Pending</span></div></li>
+        <li class="pending"><div class="tl-item"><span><span class="d">Oct 2026</span><br><span class="l">Full Performance Period Progress Report</span></span><span class="s">Pending</span></div></li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+    </div>
+  </section>
+  <section class="report" id="pm3">
+    <div class="wrap">
+      <div class="sec-head"><span class="eb">FHWA · PM3</span><h2>System Performance &amp; CMAQ</h2></div>
+<div class="block text prose"><p>Federally mandated system performance refers to travel time reliability, which is used to assess the consistency and predictability of travel times. Measures include Person-Miles Traveled on routes that are reliable, the Truck Travel Time Reliability (TTTR) Index, and Annual Hours of Peak Hour Excessive Delay (PHED).</p><p>System performance is an important factor in evaluating the overall effectiveness of a transportation system and can affect user satisfaction, safety, and economic productivity. It measures the variability in travel times and shows how often travelers experience unexpected delays or congestion. ARC adopts the State targets for system performance.</p></div>
+
+<div class="block subhead"><h3>Person-Miles Traveled on routes that are reliable</h3></div>
+
+<div class="block text prose"><p>Reliable Person-Miles Traveled on the interstate and non-interstate NHS quantifies the total distance traveled by people on roads that are deemed reliable: roads with consistent and predictable travel times and minimal delay, particularly during peak travel periods.</p></div>
+
+<figure class="block card" style="margin-left:0;margin-right:0">
+  <figcaption class="card-title">Percent of person-miles traveled that are reliable</figcaption>
+  <div style="height:400px; width:100%;">                            <div id="chart-1" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("chart-1")) {                    Plotly.newPlot(                        "chart-1",                        [{"constraintext":"none","hovertemplate":"%{x}: \u003cb\u003e%{y}%\u003c\u002fb\u003e\u003cextra\u003eInterstate\u003c\u002fextra\u003e","legendgroup":"Interstate","marker":{"color":"#2563a6"},"name":"Interstate","text":["83%","81%","81%","81%","90%","82.8%"],"textfont":{"size":12},"textposition":"outside","x":["2016","2017","2018","2019","2020","2021"],"y":[83,81,81,81,90,82.8],"type":"bar","cliponaxis":false},{"constraintext":"none","hovertemplate":"%{x}: \u003cb\u003e%{y}\u003c\u002fb\u003e\u003cextra\u003eInterstate target\u003c\u002fextra\u003e","legendgroup":"Interstate target","marker":{"color":"white","line":{"color":"#2563a6","width":1.5},"pattern":{"fgcolor":"#2563a6","shape":"\u002f","size":7,"solidity":0.35}},"name":"Interstate target","showlegend":true,"text":["73.9%","68.4%"],"textfont":{"size":12},"textposition":"outside","x":["2-year target","4-year target"],"y":[73.9,68.4],"type":"bar","cliponaxis":false},{"constraintext":"none","hovertemplate":"%{x}: \u003cb\u003e%{y}%\u003c\u002fb\u003e\u003cextra\u003eNon-Interstate NHS\u003c\u002fextra\u003e","legendgroup":"Non-Interstate NHS","marker":{"color":"#8a99a6"},"name":"Non-Interstate NHS","text":["84%","84%","83%","85%","91%","91.9%"],"textfont":{"size":12},"textposition":"outside","x":["2016","2017","2018","2019","2020","2021"],"y":[84,84,83,85,91,91.9],"type":"bar","cliponaxis":false},{"constraintext":"none","hovertemplate":"%{x}: \u003cb\u003e%{y}\u003c\u002fb\u003e\u003cextra\u003eNon-Interstate NHS target\u003c\u002fextra\u003e","legendgroup":"Non-Interstate NHS target","marker":{"color":"white","line":{"color":"#8a99a6","width":1.5},"pattern":{"fgcolor":"#8a99a6","shape":"\u002f","size":7,"solidity":0.35}},"name":"Non-Interstate NHS target","showlegend":true,"text":["87.3%","85.3%"],"textfont":{"size":12},"textposition":"outside","x":["2-year target","4-year target"],"y":[87.3,85.3],"type":"bar","cliponaxis":false}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05}}},"yaxis":{"range":[0,105],"ticksuffix":"%","gridcolor":"#e6ebef","zeroline":false,"ticks":"","automargin":true},"barmode":"group","margin":{"l":8,"r":8,"t":10,"b":8},"font":{"family":"Avenir Next, Avenir, Nunito Sans, Segoe UI, sans-serif","size":14,"color":"#1d2a33"},"legend":{"orientation":"h","yanchor":"bottom","y":1.02,"x":0,"title":{}},"hoverlabel":{"font":{"family":"Avenir Next, Avenir, Nunito Sans, Segoe UI, sans-serif"},"bgcolor":"white"},"height":400,"paper_bgcolor":"rgba(0,0,0,0)","plot_bgcolor":"rgba(0,0,0,0)","bargap":0.28,"xaxis":{"showgrid":false,"linecolor":"#b9c3cb","ticks":"","automargin":true}},                        {"displayModeBar": false, "responsive": true}                    )                };            </script>        </div>
+</figure>
+
+<div class="block subhead"><h3>Truck Travel Time Reliability</h3></div>
+
+<div class="block text prose"><p>According to the Federal Highway Administration, travel time reliability is the &quot;consistency or dependability in travel times, as measured from day-to-day and/or across different times of the day.&quot; FHWA recommends several measures to calculate the TTTR Index, including 90th or 95th percentile travel times for specific routes or trips, the buffer index, and the planning time index. The 90th or 95th percentile travel time is the simplest, and indicates how bad delay will be on the heaviest travel days. More information on calculating the TTTR Index is <a href="https://ops.fhwa.dot.gov/publications/tt_reliability/TTR_Report.htm#Fig3" target="_blank" rel="noopener">available from FHWA</a>.</p></div>
+
+<figure class="block card" style="margin-left:0;margin-right:0">
+  <figcaption class="card-title">Truck Travel Time Reliability Index (lower is better)</figcaption>
+  <div style="height:340px; width:100%;">                            <div id="chart-2" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("chart-2")) {                    Plotly.newPlot(                        "chart-2",                        [{"hovertemplate":"%{x}: \u003cb\u003e%{y:.2f}\u003c\u002fb\u003e\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#2563a6","width":3},"marker":{"size":9},"mode":"lines+markers+text","showlegend":false,"text":["1.39","1.44","1.43","1.44","1.37","1.47"],"textposition":"top center","x":[2016,2017,2018,2019,2020,2021],"y":[1.39,1.44,1.43,1.44,1.37,1.47],"type":"scatter"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05}}},"shapes":[{"line":{"color":"#5f8f3e","dash":"dash","width":2},"type":"line","x0":0,"x1":1,"xref":"x domain","y0":1.62,"y1":1.62,"yref":"y"},{"line":{"color":"#5f8f3e","dash":"dot","width":2},"type":"line","x0":0,"x1":1,"xref":"x domain","y0":1.65,"y1":1.65,"yref":"y"}],"annotations":[{"font":{"color":"#5f8f3e","size":12},"showarrow":false,"text":"State 2-year target: \u003cb\u003e1.62\u003c\u002fb\u003e","x":0,"xanchor":"left","xref":"x domain","y":1.62,"yanchor":"top","yref":"y"},{"font":{"color":"#5f8f3e","size":12},"showarrow":false,"text":"State 4-year target: \u003cb\u003e1.65\u003c\u002fb\u003e","x":0,"xanchor":"left","xref":"x domain","y":1.65,"yanchor":"bottom","yref":"y"}],"yaxis":{"range":[1.0,1.77],"gridcolor":"#e6ebef","zeroline":false,"ticks":"","automargin":true},"xaxis":{"dtick":1,"showgrid":false,"linecolor":"#b9c3cb","ticks":"","automargin":true},"margin":{"l":8,"r":8,"t":10,"b":8},"font":{"family":"Avenir Next, Avenir, Nunito Sans, Segoe UI, sans-serif","size":14,"color":"#1d2a33"},"legend":{"orientation":"h","yanchor":"bottom","y":1.02,"x":0,"title":{}},"hoverlabel":{"font":{"family":"Avenir Next, Avenir, Nunito Sans, Segoe UI, sans-serif"},"bgcolor":"white"},"height":340,"paper_bgcolor":"rgba(0,0,0,0)","plot_bgcolor":"rgba(0,0,0,0)","bargap":0.28},                        {"displayModeBar": false, "responsive": true}                    )                };            </script>        </div>
+</figure>
+
+<div class="block subhead"><h3>Annual Hours of Peak Hour Excessive Delay</h3></div>
+
+<div class="block text prose"><p>Annual Hours of Peak Hour Excessive Delay (PHED) per capita measures the time individuals spend in excessive delay during peak traffic hours, relative to population. Excessive delay is the additional time spent in traffic beyond what is considered typical, and can result from high traffic volume, inadequate infrastructure, congestion, crashes, weather, or other unforeseen events.</p></div>
+
+<figure class="block card" style="margin-left:0;margin-right:0">
+  <figcaption class="card-title">Annual hours of PHED per capita (lower is better)</figcaption>
+  <div style="height:340px; width:100%;">                            <div id="chart-3" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("chart-3")) {                    Plotly.newPlot(                        "chart-3",                        [{"cliponaxis":false,"hovertemplate":"%{x}: \u003cb\u003e%{y} hours\u003c\u002fb\u003e\u003cextra\u003e\u003c\u002fextra\u003e","marker":{"color":"#2563a6"},"showlegend":false,"text":["20 h","20.4 h","21.6 h","18.9 h","9.5 h","14.3 h"],"textposition":"outside","x":["2016","2017","2018","2019","2020","2021"],"y":[20.0,20.4,21.6,18.9,9.5,14.3],"type":"bar"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05}}},"shapes":[{"line":{"color":"#5f8f3e","dash":"dash","width":2},"type":"line","x0":0,"x1":1,"xref":"x domain","y0":23.7,"y1":23.7,"yref":"y"},{"line":{"color":"#5f8f3e","dash":"dot","width":2},"type":"line","x0":0,"x1":1,"xref":"x domain","y0":27.2,"y1":27.2,"yref":"y"}],"annotations":[{"font":{"color":"#5f8f3e","size":12},"showarrow":false,"text":"State 2-year target: \u003cb\u003e23.7 h\u003c\u002fb\u003e","x":0,"xanchor":"left","xref":"x domain","y":23.7,"yanchor":"top","yref":"y"},{"font":{"color":"#5f8f3e","size":12},"showarrow":false,"text":"State 4-year target: \u003cb\u003e27.2 h\u003c\u002fb\u003e","x":0,"xanchor":"left","xref":"x domain","y":27.2,"yanchor":"bottom","yref":"y"}],"yaxis":{"range":[0,31.279999999999998],"ticksuffix":" h","gridcolor":"#e6ebef","zeroline":false,"ticks":"","automargin":true},"margin":{"l":8,"r":8,"t":10,"b":8},"font":{"family":"Avenir Next, Avenir, Nunito Sans, Segoe UI, sans-serif","size":14,"color":"#1d2a33"},"legend":{"orientation":"h","yanchor":"bottom","y":1.02,"x":0,"title":{}},"hoverlabel":{"font":{"family":"Avenir Next, Avenir, Nunito Sans, Segoe UI, sans-serif"},"bgcolor":"white"},"height":340,"paper_bgcolor":"rgba(0,0,0,0)","plot_bgcolor":"rgba(0,0,0,0)","bargap":0.28,"xaxis":{"showgrid":false,"linecolor":"#b9c3cb","ticks":"","automargin":true}},                        {"displayModeBar": false, "responsive": true}                    )                };            </script>        </div>
+</figure>
+
+<div class="block subhead"><h3>Congestion Mitigation and Air Quality Improvement</h3></div>
+
+<div class="block text prose"><p>The Congestion Mitigation and Air Quality Improvement (CMAQ) program is a federal initiative that aims to improve air quality and reduce traffic congestion. It provides financial assistance for transportation projects and programs that reduce emissions and enhance mobility, helping to create healthier and more sustainable communities.</p><p>ARC&#x27;s CMAQ target is the 2-year and 4-year cumulative estimated emission reductions for all CMAQ-funded projects for each applicable criteria pollutant: volatile organic compounds (VOC) and oxides of nitrogen (NOx), which are precursors to ground-level ozone (smog), for which the Atlanta area is designated nonattainment or maintenance (23 CFR 490.807).</p></div>
+
+<figure class="block card" style="margin-left:0;margin-right:0">
+  <figcaption class="card-title">Estimated emission reductions from CMAQ projects (kg/day)</figcaption>
+  <div style="height:380px; width:100%;">                            <div id="chart-4" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("chart-4")) {                    Plotly.newPlot(                        "chart-4",                        [{"cliponaxis":false,"hovertemplate":"%{x}: \u003cb\u003e%{y} kg\u002fday\u003c\u002fb\u003e\u003cextra\u003e\u003c\u002fextra\u003e","marker":{"color":"#4f5d9a"},"showlegend":false,"text":["221.9","234.1","235.7","238.4"],"textposition":"outside","x":["2022","2023","2024","2025"],"y":[221.9,234.1,235.7,238.4],"type":"bar","xaxis":"x","yaxis":"y"},{"cliponaxis":false,"hovertemplate":"ARC cumulative %{x}: \u003cb\u003e%{y} kg\u002fday\u003c\u002fb\u003e\u003cextra\u003e\u003c\u002fextra\u003e","marker":{"color":"white","line":{"color":"#4f5d9a","width":1.5},"pattern":{"fgcolor":"#4f5d9a","shape":"\u002f","size":7,"solidity":0.35}},"showlegend":false,"text":["456","930.1"],"textposition":"outside","x":["2-yr\u003cbr\u003etarget","4-yr\u003cbr\u003etarget"],"y":[456.0,930.1],"type":"bar","xaxis":"x","yaxis":"y"},{"cliponaxis":false,"hovertemplate":"%{x}: \u003cb\u003e%{y} kg\u002fday\u003c\u002fb\u003e\u003cextra\u003e\u003c\u002fextra\u003e","marker":{"color":"#6f9a47"},"showlegend":false,"text":["69.3","69.9","70.5","70.8"],"textposition":"outside","x":["2022","2023","2024","2025"],"y":[69.3,69.9,70.5,70.8],"type":"bar","xaxis":"x2","yaxis":"y2"},{"cliponaxis":false,"hovertemplate":"ARC cumulative %{x}: \u003cb\u003e%{y} kg\u002fday\u003c\u002fb\u003e\u003cextra\u003e\u003c\u002fextra\u003e","marker":{"color":"white","line":{"color":"#6f9a47","width":1.5},"pattern":{"fgcolor":"#6f9a47","shape":"\u002f","size":7,"solidity":0.35}},"showlegend":false,"text":["139.2","280.5"],"textposition":"outside","x":["2-yr\u003cbr\u003etarget","4-yr\u003cbr\u003etarget"],"y":[139.2,280.5],"type":"bar","xaxis":"x2","yaxis":"y2"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05}}},"xaxis":{"anchor":"y","domain":[0.0,0.45],"categoryorder":"array","categoryarray":["2022","2023","2024","2025","2-yr\u003cbr\u003etarget","4-yr\u003cbr\u003etarget"],"tickangle":0,"showgrid":false,"linecolor":"#b9c3cb","ticks":"","automargin":true},"yaxis":{"anchor":"x","domain":[0.0,1.0],"range":[0,1069.615],"gridcolor":"#e6ebef","zeroline":false,"ticks":"","automargin":true},"xaxis2":{"anchor":"y2","domain":[0.55,1.0],"categoryorder":"array","categoryarray":["2022","2023","2024","2025","2-yr\u003cbr\u003etarget","4-yr\u003cbr\u003etarget"],"tickangle":0,"showgrid":false,"linecolor":"#b9c3cb","ticks":"","automargin":true},"yaxis2":{"anchor":"x2","domain":[0.0,1.0],"range":[0,322.575],"gridcolor":"#e6ebef","zeroline":false,"ticks":"","automargin":true},"annotations":[{"font":{"color":"#1d2a33","size":15},"showarrow":false,"text":"NOx reduction (kg\u002fday)","x":0.225,"xanchor":"center","xref":"paper","y":1.0,"yanchor":"bottom","yref":"paper"},{"font":{"color":"#1d2a33","size":15},"showarrow":false,"text":"VOC reduction (kg\u002fday)","x":0.775,"xanchor":"center","xref":"paper","y":1.0,"yanchor":"bottom","yref":"paper"}],"margin":{"l":8,"r":8,"t":36,"b":8},"font":{"family":"Avenir Next, Avenir, Nunito Sans, Segoe UI, sans-serif","size":14,"color":"#1d2a33"},"legend":{"orientation":"h","yanchor":"bottom","y":1.02,"x":0,"title":{}},"hoverlabel":{"font":{"family":"Avenir Next, Avenir, Nunito Sans, Segoe UI, sans-serif"},"bgcolor":"white"},"height":380,"paper_bgcolor":"rgba(0,0,0,0)","plot_bgcolor":"rgba(0,0,0,0)","bargap":0.28},                        {"displayModeBar": false, "responsive": true}                    )                };            </script>        </div>
+</figure>
+
+<div class="block text prose"><p>GDOT prepares the targets for PM3. Below are the reports for the two performance periods, 2018–2021 and 2022–2025.</p></div>
+
+<div class="block">
+  <div class="card-title">PM3 performance period reports</div>
+  <div class="tl amber">
+    <div class="tl-period"><h4>Performance period 2018–2021</h4>
+      <ol class="tl-steps">
+        <li><a class="tl-item" href="https://cdn.atlantaregional.org/wp-content/uploads/pm3-baseline-report-2018-2021.pdf" target="_blank" rel="noopener"><span><span class="d">Oct 2018</span><br><span class="l">Baseline Performance Period Report</span></span><span class="s">PDF ↗</span></a></li>
+        <li><a class="tl-item" href="https://cdn.atlantaregional.org/wp-content/uploads/pm3-mid-period-report-2018-2021.pdf" target="_blank" rel="noopener"><span><span class="d">Oct 2020</span><br><span class="l">Mid Performance Period Progress Report</span></span><span class="s">PDF ↗</span></a></li>
+        <li><a class="tl-item" href="https://cdn.atlantaregional.org/wp-content/uploads/pm3-full-period-report-2018-2021.pdf" target="_blank" rel="noopener"><span><span class="d">Oct 2022</span><br><span class="l">Full Performance Period Progress Report</span></span><span class="s">PDF ↗</span></a></li>
+      </ol>
+    </div>
+    <div class="tl-period"><h4>Performance period 2022–2025</h4>
+      <ol class="tl-steps">
+        <li><a class="tl-item" href="https://cdn.atlantaregional.org/wp-content/uploads/pm3-baseline-report-2022-2025.pdf" target="_blank" rel="noopener"><span><span class="d">Oct 2022</span><br><span class="l">Baseline Performance Period Report</span></span><span class="s">PDF ↗</span></a></li>
+        <li class="pending"><div class="tl-item"><span><span class="d">Oct 2024</span><br><span class="l">Mid Performance Period Progress Report</span></span><span class="s">Pending</span></div></li>
+        <li class="pending"><div class="tl-item"><span><span class="d">Oct 2026</span><br><span class="l">Full Performance Period Progress Report</span></span><span class="s">Pending</span></div></li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<div class="block text prose"><p>ARC&#x27;s CMAQ performance plans are available below.</p></div>
+
+<div class="block">
+  <div class="card-title">CMAQ performance plans</div>
+  <div class="tl slate">
+    <div class="tl-period"><h4>Performance period 2018–2021</h4>
+      <ol class="tl-steps">
+        <li><a class="tl-item" href="https://cdn.atlantaregional.org/wp-content/uploads/cmaq-baseline-performance-plan-2018-2021.pdf" target="_blank" rel="noopener"><span><span class="d">Oct 2018</span><br><span class="l">Baseline Performance Plan</span></span><span class="s">PDF ↗</span></a></li>
+        <li><a class="tl-item" href="https://cdn.atlantaregional.org/wp-content/uploads/cmaq-mid-period-performance-plan-2018-2021.pdf" target="_blank" rel="noopener"><span><span class="d">Oct 2020</span><br><span class="l">Mid Performance Period Progress Report</span></span><span class="s">PDF ↗</span></a></li>
+        <li><a class="tl-item" href="https://cdn.atlantaregional.org/wp-content/uploads/cmaq-full-period-performance-plan-2018-2021.pdf" target="_blank" rel="noopener"><span><span class="d">Oct 2022</span><br><span class="l">Full Performance Period Progress Report</span></span><span class="s">PDF ↗</span></a></li>
+      </ol>
+    </div>
+    <div class="tl-period"><h4>Performance period 2022–2025</h4>
+      <ol class="tl-steps">
+        <li><a class="tl-item" href="https://cdn.atlantaregional.org/wp-content/uploads/cmaq-baseline-performance-plan-2022-2025.pdf" target="_blank" rel="noopener"><span><span class="d">Oct 2022</span><br><span class="l">Baseline Performance Plan</span></span><span class="s">PDF ↗</span></a></li>
+        <li class="pending"><div class="tl-item"><span><span class="d">Oct 2024</span><br><span class="l">Mid Performance Period Progress Report</span></span><span class="s">Pending</span></div></li>
+        <li class="pending"><div class="tl-item"><span><span class="d">Oct 2026</span><br><span class="l">Full Performance Period Progress Report</span></span><span class="s">Pending</span></div></li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+    </div>
+  </section>
+  <section class="report" id="tam">
+    <div class="wrap">
+      <div class="sec-head"><span class="eb">FTA</span><h2>Transit Asset Management</h2></div>
+<div class="block text prose"><p>The Moving Ahead for Progress in the 21st Century Act (MAP-21) directed the U.S. Department of Transportation to develop regulations for a system to oversee and manage public transportation assets. The primary objectives are to enhance safety, improve reliability and performance, and establish performance metrics.</p><p>Transit Asset Management (TAM) is a systematic, strategic approach to managing and maintaining the assets of a transit system, including vehicles, facilities, equipment, and other components essential to providing public transportation. The goal of TAM is to optimize the performance, safety, and longevity of these assets while prioritizing funding effectively.</p><p>The Atlanta-Region Transit Link Authority (ATL) was created in 2018 to support the transit systems operating in 13 counties of the Atlanta region. These transit partners are MARTA, Xpress, and group transit operators including Cherokee Area Transportation System (CATS), CobbLinc, Connect Douglas, Forsyth County, Gwinnett County Transit (GCT), Henry County Transit, and Paulding Transit.</p></div>
+
+    </div>
+  </section>
+  <section class="report" id="transit-safety">
+    <div class="wrap">
+      <div class="sec-head"><span class="eb">FTA</span><h2>Transit Safety</h2></div>
+<div class="block text prose"><p>ARC defines targets by mode: fixed-route bus, commuter bus, demand-response, light rail, and heavy rail. Fatalities, injuries, safety events, and system reliability are used to quantify the transit safety performance measure.</p><p>Transit safety events are incidents that compromise the safety of public transportation, ranging from minor incidents to major accidents, and can involve rolling stock, infrastructure, personnel, and passengers.</p><p>System reliability refers to the ability of transit systems to operate safely without failures or malfunctions that could compromise passenger safety. It is measured as Mean Distance Between Failures (MDBF), in miles.</p></div>
+
+<div class="block card">
+  <div class="card-title">Transit safety targets by mode</div>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="t5-1" aria-controls="p5-1" aria-selected="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 2h12a3 3 0 0 1 3 3v12a2 2 0 0 1-1 1.7V21a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-2H7v2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2.3A2 2 0 0 1 3 17V5a3 3 0 0 1 3-3Zm0 3v6h12V5H6Zm1.5 8a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm9 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"/></svg>Fixed-route bus</button>
+    <button class="tab" role="tab" id="t5-2" aria-controls="p5-2" aria-selected="false"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 2h12a3 3 0 0 1 3 3v12a2 2 0 0 1-1 1.7V21a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-2H7v2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2.3A2 2 0 0 1 3 17V5a3 3 0 0 1 3-3Zm0 3v6h12V5H6Zm1.5 8a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm9 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"/></svg>Commuter bus</button>
+    <button class="tab" role="tab" id="t5-3" aria-controls="p5-3" aria-selected="false"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 6h11l4 4h2a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-1a3 3 0 0 1-6 0H9a3 3 0 0 1-6 0 1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Zm1 2v3h4V8H4Zm6 0v3h6l-3-3h-3ZM6 16a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm10 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/></svg>Demand-response</button>
+    <button class="tab" role="tab" id="t5-4" aria-controls="p5-4" aria-selected="false"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 2h8a4 4 0 0 1 4 4v9a3 3 0 0 1-2.2 2.9L20 21h-2.3l-2-3H8.3l-2 3H4l2.2-3.1A3 3 0 0 1 4 15V6a4 4 0 0 1 4-4Zm-1 4v5h10V6H7Zm1 7.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"/></svg>Light rail</button>
+    <button class="tab" role="tab" id="t5-5" aria-controls="p5-5" aria-selected="false"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 2h8a4 4 0 0 1 4 4v9a3 3 0 0 1-2.2 2.9L20 21h-2.3l-2-3H8.3l-2 3H4l2.2-3.1A3 3 0 0 1 4 15V6a4 4 0 0 1 4-4Zm-1 4v5h10V6H7Zm1 7.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"/></svg>Heavy rail</button>
+  </div>
+  <div class="tabpanel" role="tabpanel" id="p5-1" aria-labelledby="t5-1" >
+    <div class="tbl-wrap"><table class="data">
+      <thead><tr><th>Operator</th><th>Fatalities</th><th>Injuries</th><th>Safety events</th><th>System reliability (MDBF, miles)</th></tr></thead>
+      <tbody>
+<tr><td>MARTA</td><td>0</td><td>210</td><td>94</td><td>7,500</td></tr><tr><td>Gwinnett County Transit</td><td>0</td><td>14</td><td>11</td><td>15,000</td></tr><tr><td>CobbLinc</td><td>0</td><td>5</td><td>5</td><td>2,700</td></tr><tr><td>CATS</td><td>0</td><td>1</td><td>1</td><td>64,028</td></tr><tr><td>CPACS</td><td>0</td><td>0</td><td>0</td><td>28,253</td></tr><tr><td>Connect Douglas</td><td>0</td><td>4</td><td>5</td><td>41,102</td></tr>      <tr class="regional"><td>Atlanta regional safety target</td><td>0</td><td>210</td><td>94</td><td>7,500</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <div class="tabpanel" role="tabpanel" id="p5-2" aria-labelledby="t5-2" hidden>
+    <div class="tbl-wrap"><table class="data">
+      <thead><tr><th>Operator</th><th>Fatalities</th><th>Injuries</th><th>Safety events</th><th>System reliability (MDBF, miles)</th></tr></thead>
+      <tbody>
+<tr><td>Gwinnett County Transit</td><td>0</td><td>1</td><td>29</td><td>50,634</td></tr><tr><td>Xpress</td><td>0</td><td>8</td><td>38</td><td>16,000</td></tr>      <tr class="regional"><td>Atlanta regional safety target</td><td>0</td><td>8</td><td>38</td><td>16,000</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <div class="tabpanel" role="tabpanel" id="p5-3" aria-labelledby="t5-3" hidden>
+    <div class="tbl-wrap"><table class="data">
+      <thead><tr><th>Operator</th><th>Fatalities</th><th>Injuries</th><th>Safety events</th><th>System reliability (MDBF, miles)</th></tr></thead>
+      <tbody>
+<tr><td>MARTA</td><td>0</td><td>14</td><td>11</td><td>15,000</td></tr><tr><td>Gwinnett County Transit</td><td>0</td><td>2</td><td>9</td><td>26,162</td></tr><tr><td>CobbLinc</td><td>0</td><td>1</td><td>1</td><td>28,000</td></tr><tr><td>CATS</td><td>0</td><td>3</td><td>3</td><td>89,387</td></tr><tr><td>CPACS</td><td>0</td><td>0</td><td>0</td><td>46,905</td></tr><tr><td>Connect Douglas</td><td>0</td><td>1</td><td>1</td><td>22,296</td></tr><tr><td>Henry County Transit</td><td>0</td><td>1</td><td>1</td><td>50,000</td></tr>      <tr class="regional"><td>Atlanta regional safety target</td><td>0</td><td>14</td><td>11</td><td>15,000</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <div class="tabpanel" role="tabpanel" id="p5-4" aria-labelledby="t5-4" hidden>
+    <div class="tbl-wrap"><table class="data">
+      <thead><tr><th>Operator</th><th>Fatalities</th><th>Injuries</th><th>Safety events</th><th>System reliability (MDBF, miles)</th></tr></thead>
+      <tbody>
+<tr><td>MARTA</td><td>0</td><td>5</td><td>5</td><td>2,700</td></tr>      <tr class="regional"><td>Atlanta regional safety target</td><td>0</td><td>5</td><td>5</td><td>2,700</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <div class="tabpanel" role="tabpanel" id="p5-5" aria-labelledby="t5-5" hidden>
+    <div class="tbl-wrap"><table class="data">
+      <thead><tr><th>Operator</th><th>Fatalities</th><th>Injuries</th><th>Safety events</th><th>System reliability (MDBF, miles)</th></tr></thead>
+      <tbody>
+<tr><td>MARTA</td><td>0</td><td>28</td><td>32</td><td>23,000</td></tr>      <tr class="regional"><td>Atlanta regional safety target</td><td>0</td><td>28</td><td>32</td><td>23,000</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</div>
+<div class="block text prose"><p>The Federal Transit Administration (FTA) has established requirements to ensure the safety of transit passengers, employees, and the public. Transit agencies must comply with these safety regulations, standards, and guidelines to receive federal funding. Transit agencies within the Atlanta region are the Metropolitan Atlanta Rapid Transit Authority (MARTA), CobbLinc, Gwinnett County Transit, Cherokee Area Transportation System, Henry County Transit, Connect Douglas, Xpress (operated by GRTA), and the Center for Pan Asian Community Services (CPACS).</p></div>
+
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>Atlanta Regional Commission · System Performance Report · Last updated October 2026</div>
+    <div style="margin-top:6px"><a href="https://atlantaregional.org/what-we-do/transportation-planning/transportation-dashboard/">← Back to the Transportation Dashboard</a></div>
+  </div>
+</footer>
+<button class="totop" aria-label="Back to top" onclick="window.scrollTo({top:0})">↑</button>
+
+<script>
+/* ---------- active nav link while scrolling ---------- */
+(() => {
+  const links = [...document.querySelectorAll('.nav a')];
+  const byId = Object.fromEntries(links.map(a => [a.hash.slice(1), a]));
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { links.forEach(a => a.classList.remove('active')); byId[e.target.id]?.classList.add('active');
+      byId[e.target.id]?.scrollIntoView({block:'nearest', inline:'center'}); } });
+  }, {rootMargin: '-35% 0px -60% 0px'});
+  document.querySelectorAll('section.report').forEach(s => obs.observe(s));
+  const top = document.querySelector('.totop');
+  addEventListener('scroll', () => top.classList.toggle('show', scrollY > 800), {passive:true});
+})();
+
+/* ---------- transit tabs ---------- */
+document.querySelectorAll('[role=tablist]').forEach(list => {
+  const tabs = [...list.querySelectorAll('[role=tab]')];
+  tabs.forEach(t => t.addEventListener('click', () => {
+    tabs.forEach(x => { x.setAttribute('aria-selected', x === t); document.getElementById(x.getAttribute('aria-controls')).hidden = x !== t; });
+  }));
+});
+
+/* ---------- ArcGIS maps: load the SDK only when a map scrolls into view ---------- */
+(() => {
+  const maps = document.querySelectorAll('.map[data-webmap]');
+  if (!maps.length) return;
+  let sdk;
+  const loadSdk = () => sdk ||= new Promise((res, rej) => {
+    const css = document.createElement('link'); css.rel = 'stylesheet';
+    css.href = 'https://js.arcgis.com/4.31/esri/themes/light/main.css'; document.head.appendChild(css);
+    const s = document.createElement('script'); s.src = 'https://js.arcgis.com/4.31/'; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+  const init = el => loadSdk().then(() => {
+    require(['esri/config','esri/WebMap','esri/views/MapView','esri/widgets/Legend','esri/widgets/LayerList','esri/widgets/Expand','esri/widgets/Home'],
+      (esriConfig, WebMap, MapView, Legend, LayerList, Expand, Home) => {
+      esriConfig.portalUrl = "https://garc.maps.arcgis.com";
+      el.innerHTML = '';
+      const view = new MapView({container: el, map: new WebMap({portalItem: {id: el.dataset.webmap}}),
+                                navigation: {mouseWheelZoomEnabled: false}, popup: {dockEnabled: false}});
+      view.ui.add(new Home({view}), 'top-left');
+      view.ui.add(new Expand({view, content: new LayerList({view}), expandTooltip: 'Layers', group: 'tr'}), 'top-right');
+      view.ui.add(new Expand({view, content: new Legend({view}), expandTooltip: 'Legend', expanded: innerWidth > 760, group: 'tr'}), 'top-right');
+    });
+  }).catch(() => { el.querySelector('.loading').textContent = 'Map could not load. Use “Open full map”.'; });
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { io.unobserve(e.target); init(e.target); } }), {rootMargin: '300px'});
+  maps.forEach(m => io.observe(m));
+})();
+</script>
+</body>
+</html>
