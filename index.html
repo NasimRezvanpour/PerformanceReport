@@ -311,9 +311,9 @@ footer a{color:#fff}
 <div class="block text prose"><p>The Asset Management map shows the condition of roads and bridges located within the Atlanta region.</p></div>
 
 <div class="block card map-card">
-  <div class="card-title">Pavement and bridge condition — Atlanta region</div>
-  <div class="map" data-webmap="1e028462467346558d8af3d7a14799ea" style="height:520px"><div class="loading">Loading map…</div></div>
-  <div class="map-foot"><span class="muted">Use the layer and legend buttons on the map to explore.</span><a href="https://garc.maps.arcgis.com/apps/mapviewer/index.html?webmap=1e028462467346558d8af3d7a14799ea" target="_blank" rel="noopener">Open full map ↗</a></div>
+  <div class="card-title">Pavement and bridge condition — Atlanta region (2022)</div>
+  <div class="map" data-local="pm2_assets" data-src="data/pm2_assets.js" data-layers="[{&#34;classes&#34;: {&#34;1&#34;: &#34;Good&#34;, &#34;2&#34;: &#34;Fair&#34;, &#34;3&#34;: &#34;Poor&#34;}, &#34;field&#34;: &#34;Condition&#34;, &#34;group_by&#34;: [&#34;RCLink&#34;, &#34;Dir&#34;], &#34;kind&#34;: &#34;line&#34;, &#34;layer&#34;: &#34;ARC_Routes&#34;, &#34;simplify_ft&#34;: 40, &#34;title&#34;: &#34;Pavement condition&#34;}, {&#34;classes&#34;: {&#34;F&#34;: &#34;Fair&#34;, &#34;G&#34;: &#34;Good&#34;, &#34;P&#34;: &#34;Poor&#34;}, &#34;field&#34;: &#34;BRIDGE_CONDITION&#34;, &#34;kind&#34;: &#34;point&#34;, &#34;layer&#34;: &#34;ARC_Bridges&#34;, &#34;popup_fields&#34;: {&#34;CULVERT_COND_062&#34;: &#34;Culvert rating&#34;, &#34;DECK_AREA&#34;: &#34;Deck area (m\u00b2)&#34;, &#34;DECK_COND_058&#34;: &#34;Deck rating&#34;, &#34;FACILITY_CARRIED_007&#34;: &#34;Facility carried&#34;, &#34;FEATURES_DESC_006A&#34;: &#34;Feature crossed&#34;, &#34;LOWEST_RATING&#34;: &#34;Lowest rating&#34;, &#34;STRUCTURE_NUMBER_008&#34;: &#34;Structure number&#34;, &#34;SUBSTRUCTURE_COND_060&#34;: &#34;Substructure rating&#34;, &#34;SUPERSTRUCTURE_COND_059&#34;: &#34;Superstructure rating&#34;, &#34;YEAR_BUILT_027&#34;: &#34;Year built&#34;}, &#34;split_field&#34;: &#34;HIGHWAY_SYSTEM_104&#34;, &#34;title&#34;: &#34;Bridges&#34;}]" style="height:560px"><div class="loading">Loading map…</div></div>
+  <div class="map-foot"><span class="muted">Click a road or bridge for details. Use the layer and legend buttons to explore.</span></div>
 </div>
 
 <div class="block">
@@ -550,29 +550,68 @@ document.querySelectorAll('[role=tablist]').forEach(list => {
   }));
 });
 
-/* ---------- ArcGIS maps: load the SDK only when a map scrolls into view ---------- */
+/* ---------- ArcGIS maps: load the SDK (and map data) only when a map scrolls into view ---------- */
 (() => {
-  const maps = document.querySelectorAll('.map[data-webmap]');
+  const maps = document.querySelectorAll('.map[data-webmap], .map[data-local]');
   if (!maps.length) return;
+  const loadScript = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
   let sdk;
-  const loadSdk = () => sdk ||= new Promise((res, rej) => {
+  const loadSdk = () => sdk ||= (() => {
     const css = document.createElement('link'); css.rel = 'stylesheet';
     css.href = 'https://js.arcgis.com/4.31/esri/themes/light/main.css'; document.head.appendChild(css);
-    const s = document.createElement('script'); s.src = 'https://js.arcgis.com/4.31/'; s.onload = res; s.onerror = rej;
-    document.head.appendChild(s);
-  });
-  const init = el => loadSdk().then(() => {
-    require(['esri/config','esri/WebMap','esri/views/MapView','esri/widgets/Legend','esri/widgets/LayerList','esri/widgets/Expand','esri/widgets/Home'],
-      (esriConfig, WebMap, MapView, Legend, LayerList, Expand, Home) => {
+    return loadScript('https://js.arcgis.com/4.31/');
+  })();
+  const COLORS = {Good: '#5f8f3e', Fair: '#e0a43a', Poor: '#c0392b', Unknown: '#9aa5ae'};
+
+  // Builds the layers for a map whose data came from a geodatabase (see gdb_to_map.py)
+  const localLayers = (el, GeoJSONLayer) => {
+    const data = window.__GEO[el.dataset.local], cfg = JSON.parse(el.dataset.layers), out = [];
+    const blobUrl = fc => URL.createObjectURL(new Blob([JSON.stringify(fc)], {type: 'application/json'}));
+    const uv = (sym) => ({type: 'unique-value', field: 'cls', legendOptions: {title: 'Condition'},
+      uniqueValueInfos: ['Good','Fair','Poor'].map(v => ({value: v, label: v, symbol: sym(COLORS[v])}))});
+    cfg.forEach(c => {
+      const url = blobUrl(data[c.layer]);
+      if (c.kind === 'line') {
+        out.push(new GeoJSONLayer({url, title: c.title, orderBy: [{field: 'cls', order: 'descending'}],
+          renderer: uv(color => ({type: 'simple-line', color, width: 2.5})),
+          popupTemplate: {title: 'Route {RCLink}', content: [{type: 'fields', fieldInfos: [
+            {fieldName: 'cls', label: 'Pavement condition'}, {fieldName: 'Dir', label: 'Direction (I = increasing, D = decreasing)'},
+            {fieldName: 'miles', label: 'Length (miles)'}]}]}}));
+      } else {
+        const fields = [{fieldName: 'cls', label: 'Bridge condition'}].concat(
+          Object.entries(c.popup_fields || {}).map(([f, label]) => ({fieldName: f, label})));
+        const mk = (title, where, visible) => new GeoJSONLayer({url, title, visible, definitionExpression: where,
+          renderer: uv(color => ({type: 'simple-marker', style: 'circle', size: 7, color, outline: {color: '#fff', width: 0.8}})),
+          popupTemplate: {title: '{FACILITY_CARRIED_007} over {FEATURES_DESC_006A}', content: [{type: 'fields', fieldInfos: fields}]}});
+        if (c.split_field) {
+          out.push(mk(c.title + ' – off the NHS', `${c.split_field} = 0`, false));
+          out.push(mk(c.title + ' – on the NHS', `${c.split_field} = 1`, true));
+        } else out.push(mk(c.title, null, true));
+      }
+    });
+    return out;
+  };
+
+  const init = el => loadSdk().then(() => el.dataset.src ? loadScript(el.dataset.src) : null).then(() => {
+    require(['esri/config','esri/Map','esri/WebMap','esri/layers/GeoJSONLayer','esri/views/MapView','esri/widgets/Legend','esri/widgets/LayerList','esri/widgets/Expand','esri/widgets/Home'],
+      (esriConfig, Map, WebMap, GeoJSONLayer, MapView, Legend, LayerList, Expand, Home) => {
       esriConfig.portalUrl = "https://garc.maps.arcgis.com";
       el.innerHTML = '';
-      const view = new MapView({container: el, map: new WebMap({portalItem: {id: el.dataset.webmap}}),
+      let map, extra = {};
+      if (el.dataset.local) {
+        map = new Map({basemap: 'gray-vector', layers: localLayers(el, GeoJSONLayer)});
+        extra = {center: [-84.39, 33.80], zoom: 8};
+      } else {
+        map = new WebMap({portalItem: {id: el.dataset.webmap}});
+      }
+      const view = new MapView({container: el, map, ...extra,
                                 navigation: {mouseWheelZoomEnabled: false}, popup: {dockEnabled: false}});
       view.ui.add(new Home({view}), 'top-left');
-      view.ui.add(new Expand({view, content: new LayerList({view}), expandTooltip: 'Layers', group: 'tr'}), 'top-right');
-      view.ui.add(new Expand({view, content: new Legend({view}), expandTooltip: 'Legend', expanded: innerWidth > 760, group: 'tr'}), 'top-right');
+      // Layer list and legend both start collapsed
+      view.ui.add(new Expand({view, content: new LayerList({view}), expandTooltip: 'Layers', expanded: false, group: 'tr'}), 'top-right');
+      view.ui.add(new Expand({view, content: new Legend({view}), expandTooltip: 'Legend', expanded: false, group: 'tr'}), 'top-right');
     });
-  }).catch(() => { el.querySelector('.loading').textContent = 'Map could not load. Use “Open full map”.'; });
+  }).catch(() => { el.querySelector('.loading').textContent = 'Map could not load.'; });
   const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { io.unobserve(e.target); init(e.target); } }), {rootMargin: '300px'});
   maps.forEach(m => io.observe(m));
 })();
